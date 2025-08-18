@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ABSA Prediction</title>
+    <style>
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        max-width: 1500px;
+        margin: 10px auto;
+        padding: 20px;
+        background-color: #f9fbfc;
+        color: #333;
+      }
+
+      h1 {
+        text-align: center;
+        color: #2b5876;
+      }
+
+      form {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+      }
+
+      label {
+        font-weight: 600;
+        display: block;
+        margin-top: 15px;
+      }
+
+      textarea {
+        width: 97%;
+        height: 120px;
+        font-size: 15px;
+        padding: 10px;
+        border-radius: 6px;
+        border: 1px solid #ccc;
+        resize: vertical;
+      }
+
+      input[type="file"] {
+        margin-top: 10px;
+      }
+
+      button {
+        background-color: #2b5876;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        font-size: 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        margin-top: 20px;
+      }
+
+      .button-container {
+        text-align: center;
+        margin-top: 25px;
+      }
+
+      button:hover {
+        background-color: #1b3e54;
+      }
+
+      .result-section {
+        margin-top: 40px;
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+      }
+      .table-wrapper {
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: auto;
+        margin-top: 20px;
+      }
+
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 10px 12px;
+        text-align: left;
+        font-size: 15px;
+        word-wrap: break-word;
+      }
+
+      th {
+        background-color: #e3effa;
+      }
+
+      ul {
+        list-style: none;
+        padding-left: 0;
+      }
+
+      li {
+        margin: 5px 0;
+        font-weight: 500;
+      }
+
+      @media (max-width: 600px) {
+        textarea {
+          height: 100px;
+        }
+
+        th,
+        td {
+          font-size: 13px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Aspect-Based Sentiment Analysis (ABSA)</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+      <label>Input Single Review:</label>
+      <textarea name="single_text" placeholder="Masukkan review..."></textarea>
+
+      <label
+        >Atau Upload File CSV (pastikan ulasan berada pada kolom
+        "review")</label
+      >
+      <input type="file" name="batch_file" accept=".csv, .xls, .xlsx" />
+      <label>Pilih Lokasi (Opsional)</label>
+      <input name="location" value="{{ request.form.location }}" />
+      <div class="button-container">
+        <button type="submit">Analisis</button>
+      </div>
+    </form>
+
+    {% if original_text %}
+    <div class="result-section">
+      <h2>Hasil Prediksi Single Input</h2>
+      <p><strong>Review:</strong> {{ original_text }}</p>
+      <p><strong>Terjemahan:</strong> {{ translated_text or "-" }}</p>
+      <ul>
+        {% for aspect in detected_aspects %}
+        <li>{{ aspect|capitalize }}: {{ sentiment_results[aspect] }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %} {% if batch_results %}
+    <div class="result-section">
+      <h2>
+        Hasil Prediksi Batch {% if location %}
+        <span style="font-size: 16px; font-weight: normal; color: #555"
+          >— Lokasi : {{ location }}</span
+        >
+        {% endif %}
+      </h2>
+      
+    {% if chart_data %}
+    <div class="result-section">
+      <h2>Distribusi Sentimen per Aspek</h2>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: repeat(2, 1fr);
+          gap: 30px;
+          justify-items: center;
+        "
+      >
+        {% for aspect, counts in chart_data.items() %}
+        <div style="text-align: center; width: 100%; max-width: 350px">
+          <h3>{{ aspect|capitalize }}</h3>
+          <canvas
+            id="chart-{{ aspect }}"
+            width="250"
+            height="250"
+            style="max-width: 100%; height: auto"
+          ></canvas>
+        </div>
+
+        {% endfor %}
+      </div>
+    </div>
+
+    {% if top_keywords %}
+      <h3 class="mt-4">Kata Kunci Dominan per Aspek dan Sentimen</h3>
+      {% for aspect, sentiments in top_keywords.items() %}
+        <div class="mt-3">
+          <strong>{{ aspect|capitalize }}</strong><br>
+          {% for sentiment, keywords in sentiments.items() %}
+            <em>{{ sentiment|capitalize }}</em>: 
+            {{ keywords | map(attribute=0) | join(', ') }}<br>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    {% endif %}
+      <table>
+        <thead>
+          <tr>
+            <th>No.</th>
+            <th>Review</th>
+            <th>Terjemahan</th>
+            <th>Attraction</th>
+            <th>Amenities</th>
+            <th>Access</th>
+            <th>Price</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in batch_results %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ r.text }}</td>
+            <td>{{ r.translated}}</td>
+            <td>{{ r.sentiments.get('attraction', 'none') }}</td>
+            <td>{{ r.sentiments.get('amenities', 'none') }}</td>
+            <td>{{ r.sentiments.get('access', 'none') }}</td>
+            <td>{{ r.sentiments.get('price', 'none') }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <!-- Ini menutup hasil batch -->
+
+
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+    <script>
+      const chartData = {{ chart_data | tojson }};
+      for (const [aspect, counts] of Object.entries(chartData)) {
+        const ctx = document.getElementById(`chart-${aspect}`);
+        new Chart(ctx, {
+          type: 'pie',
+          data: {
+            labels: ['Positive', 'Negative', 'None'],
+            datasets: [{
+              label: aspect,
+              data: [
+                counts.positive || 0,
+                counts.negative || 0,
+                counts.none || 0
+              ],
+              backgroundColor: ['#4CAF50', '#F44336', '#9E9E9E']
+            }]
+          },
+          options: {
+            plugins: {
+              legend: { position: 'bottom' },
+              datalabels: {
+                formatter: (value, context) => {
+                  const data = context.chart.data.datasets[0].data;
+                  const total = data.reduce((a, b) => a + b, 0);
+                  const percentage = total > 0 ? (value / total * 100).toFixed(1) : 0;
+                  return `${percentage}%`;
+                },
+                color: '#fff',
+                font: {
+                  weight: 'bold'
+                }
+              }
+            }
+          },
+          plugins: [ChartDataLabels]
+        });
+      }
+    </script>
+    {% endif %} {% endif %}
+  </body>
+</html>
