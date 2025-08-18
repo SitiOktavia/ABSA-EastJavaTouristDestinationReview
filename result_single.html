@@ -1,0 +1,9 @@
+<h2>Hasil ABSA (Ulasan Tunggal)</h2>
+<p><strong>Ulasan:</strong> {{ review }}</p>
+<table border="1">
+  <tr><th>Aspek</th><th>Sentimen</th></tr>
+  {% for aspek, sentimen in hasil.items() %}
+  <tr><td>{{ aspek }}</td><td>{{ sentimen }}</td></tr>
+  {% endfor %}
+</table>
+<a href="/">Kembali</a>
